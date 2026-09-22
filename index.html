@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Conferidor de Seriais</title>
+
+<style>
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    font-family: Arial, sans-serif;
+    background: #f3f4f6;
+    color: #111827;
+}
+
+.container {
+    max-width: 1100px;
+    margin: 30px auto;
+    padding: 0 18px;
+}
+
+.card {
+    background: white;
+    border-radius: 14px;
+    padding: 22px;
+    margin-bottom: 18px;
+    box-shadow: 0 4px 18px rgba(0,0,0,.07);
+}
+
+h1 {
+    margin: 0 0 6px;
+}
+
+.sub {
+    color: #6b7280;
+}
+
+textarea {
+    width: 100%;
+    min-height: 240px;
+    padding: 14px;
+    border: 1px solid #d1d5db;
+    border-radius: 10px;
+    font: 14px Consolas, monospace;
+    resize: vertical;
+}
+
+#resultado {
+    width: 100%;
+    height: 300px;
+    background: #111827;
+    color: #e5e7eb;
+    border: 0;
+    border-radius: 10px;
+    padding: 14px;
+    font: 14px Consolas, monospace;
+    resize: vertical;
+}
+
+.buttons {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-top: 12px;
+}
+
+button {
+    border: 0;
+    border-radius: 9px;
+    padding: 11px 16px;
+    cursor: pointer;
+    background: #2563eb;
+    color: white;
+    font-weight: bold;
+}
+
+button.green {
+    background: #059669;
+}
+
+button.secondary {
+    background: #4b5563;
+}
+
+.stats {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 12px;
+}
+
+.stat {
+    background: #f9fafb;
+    border: 1px solid #e5e7eb;
+    border-radius: 10px;
+    padding: 15px;
+}
+
+.stat b {
+    display: block;
+    font-size: 25px;
+    margin-top: 4px;
+}
+
+.label {
+    color: #6b7280;
+    font-size: 13px;
+}
+
+pre {
+    background: #111827;
+    color: #e5e7eb;
+    border-radius: 10px;
+    padding: 14px;
+    min-height: 55px;
+    max-height: 330px;
+    overflow: auto;
+    white-space: pre-wrap;
+}
+
+.warn {
+    color: #b45309;
+}
+
+@media(max-width:800px) {
+    .stats {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+    <div class="card">
+
+        <h1>🔎 Conferidor de Seriais</h1>
+
+        <p class="sub">
+            Cole o conteúdo do jeito que você receber.
+            O sistema procura códigos de 12 caracteres e deixa um por linha.
+        </p>
+
+        <textarea
+            id="entrada"
+            placeholder="Cole aqui os dados bagunçados..."
+        ></textarea>
+
+        <div class="buttons">
+
+            <button
+                class="green"
+                onclick="separarSeriais()"
+            >
+                ✨ Separar seriais
+            </button>
+
+            <button
+                onclick="analisar()"
+            >
+                🔎 Analisar
+            </button>
+
+            <button
+                class="secondary"
+                onclick="limpar()"
+            >
+                🧹 Limpar
+            </button>
+
+        </div>
+
+    </div>
+
+
+    <div class="card">
+
+        <div class="stats">
+
+            <div class="stat">
+                <span class="label">Total encontrado</span>
+                <b id="total">0</b>
+            </div>
+
+            <div class="stat">
+                <span class="label">Únicos</span>
+                <b id="unicos">0</b>
+            </div>
+
+            <div class="stat">
+                <span class="label">Repetidos</span>
+                <b id="repetidos">0</b>
+            </div>
+
+            <div class="stat">
+                <span class="label">Válidos</span>
+                <b id="validos">0</b>
+            </div>
+
+            <div class="stat">
+                <span class="label">Outros</span>
+                <b id="outros">0</b>
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <div class="card">
+
+        <h3>✨ Seriais separados</h3>
+
+        <textarea
+            id="resultado"
+            readonly
+            onclick="selecionarResultado()"
+        >Nenhum resultado ainda.</textarea>
+
+        <div class="buttons">
+
+            <button
+                class="green"
+                onclick="copiarSeriais()"
+            >
+                📋 Copiar seriais
+            </button>
+
+            <button
+                class="secondary"
+                onclick="selecionarResultado()"
+            >
+                🔲 Selecionar tudo
+            </button>
+
+        </div>
+
+    </div>
+
+
+    <div class="card">
+
+        <h3 class="warn">⚠️ Seriais repetidos</h3>
+
+        <pre id="listaRepetidos">
+Nenhum resultado ainda.
+        </pre>
+
+    </div>
+
+</div>
+
+
+<script>
+
+function encontrarSeriais(texto) {
+
+    /*
+        Procura qualquer sequência de exatamente
+        12 letras ou números.
+
+        Funciona mesmo que os dados estejam:
+
+        900DCBE81622 | ABC | 230050715869
+
+        ou em tabelas, espaços, quebras de linha etc.
+    */
+
+    const encontrados =
+        texto
+        .toUpperCase()
+        .match(/[A-Z0-9]{12}/g);
+
+    return encontrados || [];
+}
+
+
+function separarSeriais() {
+
+    const texto =
+        document.getElementById("entrada").value;
+
+    const seriais =
+        encontrarSeriais(texto);
+
+    const unicos =
+        [...new Set(seriais)];
+
+    document.getElementById("resultado").value =
+        unicos.length > 0
+        ? unicos.join("\n")
+        : "Nenhum serial de 12 caracteres encontrado.";
+
+    atualizarContadores(seriais, unicos);
+
+    encontrarRepetidos(seriais);
+}
+
+
+function analisar() {
+
+    const texto =
+        document.getElementById("entrada").value;
+
+    const seriais =
+        encontrarSeriais(texto);
+
+    const unicos =
+        [...new Set(seriais)];
+
+    document.getElementById("resultado").value =
+        unicos.length > 0
+        ? unicos.join("\n")
+        : "Nenhum serial de 12 caracteres encontrado.";
+
+    atualizarContadores(seriais, unicos);
+
+    encontrarRepetidos(seriais);
+}
+
+
+function atualizarContadores(seriais, unicos) {
+
+    const contagem = {};
+
+    seriais.forEach(serial => {
+
+        if (!contagem[serial]) {
+            contagem[serial] = 0;
+        }
+
+        contagem[serial]++;
+
+    });
+
+
+    let quantidadeRepetidos = 0;
+
+    Object.values(contagem).forEach(qtd => {
+
+        if (qtd > 1) {
+            quantidadeRepetidos++;
+        }
+
+    });
+
+
+    document.getElementById("total").textContent =
+        seriais.length;
+
+    document.getElementById("unicos").textContent =
+        unicos.length;
+
+    document.getElementById("repetidos").textContent =
+        quantidadeRepetidos;
+
+    document.getElementById("validos").textContent =
+        seriais.length;
+
+    document.getElementById("outros").textContent =
+        0;
+}
+
+
+function encontrarRepetidos(seriais) {
+
+    const contagem = {};
+
+    seriais.forEach(serial => {
+
+        if (!contagem[serial]) {
+            contagem[serial] = 0;
+        }
+
+        contagem[serial]++;
+
+    });
+
+
+    const repetidos = [];
+
+    Object.keys(contagem).forEach(serial => {
+
+        if (contagem[serial] > 1) {
+
+            repetidos.push(
+                serial +
+                " → apareceu " +
+                contagem[serial] +
+                "x"
+            );
+
+        }
+
+    });
+
+
+    document.getElementById("listaRepetidos").textContent =
+        repetidos.length > 0
+        ? repetidos.join("\n")
+        : "Nenhum serial repetido.";
+}
+
+
+function selecionarResultado() {
+
+    const campo =
+        document.getElementById("resultado");
+
+    campo.focus();
+
+    campo.select();
+
+    campo.setSelectionRange(
+        0,
+        campo.value.length
+    );
+}
+
+
+function copiarSeriais() {
+
+    const campo =
+        document.getElementById("resultado");
+
+    if (
+        !campo.value ||
+        campo.value ===
+        "Nenhum resultado ainda."
+    ) {
+        return;
+    }
+
+
+    selecionarResultado();
+
+
+    try {
+
+        const sucesso =
+            document.execCommand("copy");
+
+        if (sucesso) {
+
+            alert(
+                "✅ Seriais copiados!"
+            );
+
+        } else {
+
+            alert(
+                "Os seriais foram selecionados. Pressione Ctrl+C."
+            );
+
+        }
+
+    } catch (erro) {
+
+        alert(
+            "Os seriais foram selecionados. Pressione Ctrl+C."
+        );
+
+    }
+
+}
+
+
+function limpar() {
+
+    document.getElementById("entrada").value =
+        "";
+
+    document.getElementById("resultado").value =
+        "Nenhum resultado ainda.";
+
+    document.getElementById("listaRepetidos").textContent =
+        "Nenhum resultado ainda.";
+
+    document.getElementById("total").textContent =
+        "0";
+
+    document.getElementById("unicos").textContent =
+        "0";
+
+    document.getElementById("repetidos").textContent =
+        "0";
+
+    document.getElementById("validos").textContent =
+        "0";
+
+    document.getElementById("outros").textContent =
+        "0";
+}
+
+</script>
+
+</body>
+</html>
