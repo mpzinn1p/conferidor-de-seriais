@@ -86,6 +86,16 @@ button.secondary {
     background: #4b5563;
 }
 
+button.mode {
+    background: #e5e7eb;
+    color: #111827;
+}
+
+button.mode.active {
+    background: #2563eb;
+    color: white;
+}
+
 .stats {
     display: grid;
     grid-template-columns: repeat(5, 1fr);
@@ -125,6 +135,24 @@ pre {
     color: #b45309;
 }
 
+.modo {
+    margin-top: 15px;
+}
+
+.modo-titulo {
+    font-weight: bold;
+    margin-bottom: 8px;
+}
+
+.info {
+    margin-top: 10px;
+    padding: 10px 12px;
+    background: #eff6ff;
+    border-radius: 8px;
+    color: #1e40af;
+    font-size: 13px;
+}
+
 @media(max-width:800px) {
     .stats {
         grid-template-columns: repeat(2, 1fr);
@@ -142,22 +170,58 @@ pre {
         <h1>🔎 Conferidor de Seriais</h1>
 
         <p class="sub">
-            Cole o conteúdo do jeito que você receber.
-            O sistema procura códigos de 12 caracteres e deixa um por linha.
+            Escolha o tipo de informação que deseja conferir e cole os dados abaixo.
         </p>
+
+        <div class="modo">
+
+            <div class="modo-titulo">
+                Tipo de conferência
+            </div>
+
+            <div class="buttons">
+
+                <button
+                    id="btnEquipamentos"
+                    class="mode active"
+                    onclick="selecionarModo('equipamentos')"
+                >
+                    🔧 Equipamentos
+                </button>
+
+                <button
+                    id="btnChips"
+                    class="mode"
+                    onclick="selecionarModo('chips')"
+                >
+                    📱 Chips
+                </button>
+
+            </div>
+
+            <div
+                id="infoModo"
+                class="info"
+            >
+                Equipamentos: procura códigos de 12 caracteres.
+            </div>
+
+        </div>
+
 
         <textarea
             id="entrada"
             placeholder="Cole aqui os dados bagunçados..."
         ></textarea>
 
+
         <div class="buttons">
 
             <button
                 class="green"
-                onclick="separarSeriais()"
+                onclick="separar()"
             >
-                ✨ Separar seriais
+                ✨ Separar
             </button>
 
             <button
@@ -214,7 +278,9 @@ pre {
 
     <div class="card">
 
-        <h3>✨ Seriais separados</h3>
+        <h3 id="tituloResultado">
+            ✨ Seriais separados
+        </h3>
 
         <textarea
             id="resultado"
@@ -228,7 +294,7 @@ pre {
                 class="green"
                 onclick="copiarSeriais()"
             >
-                📋 Copiar seriais
+                📋 Copiar
             </button>
 
             <button
@@ -245,11 +311,11 @@ pre {
 
     <div class="card">
 
-        <h3 class="warn">⚠️ Seriais repetidos</h3>
+        <h3 class="warn">
+            ⚠️ Repetidos
+        </h3>
 
-        <pre id="listaRepetidos">
-Nenhum resultado ainda.
-        </pre>
+        <pre id="listaRepetidos">Nenhum resultado ainda.</pre>
 
     </div>
 
@@ -258,18 +324,64 @@ Nenhum resultado ainda.
 
 <script>
 
+let modoAtual = "equipamentos";
+
+
+/* ================================
+   ALTERAR MODO
+================================ */
+
+function selecionarModo(modo) {
+
+    modoAtual = modo;
+
+    const btnEquipamentos =
+        document.getElementById("btnEquipamentos");
+
+    const btnChips =
+        document.getElementById("btnChips");
+
+    const info =
+        document.getElementById("infoModo");
+
+    const titulo =
+        document.getElementById("tituloResultado");
+
+
+    if (modo === "equipamentos") {
+
+        btnEquipamentos.classList.add("active");
+        btnChips.classList.remove("active");
+
+        info.textContent =
+            "Equipamentos: procura códigos de 12 caracteres.";
+
+        titulo.textContent =
+            "✨ Seriais separados";
+
+    } else {
+
+        btnEquipamentos.classList.remove("active");
+        btnChips.classList.add("active");
+
+        info.textContent =
+            "Chips: procura números de 20 dígitos começando com 89.";
+
+        titulo.textContent =
+            "📱 Chips separados";
+    }
+
+
+    limpar();
+
+}
+
+
+/* ================================
+   ENCONTRAR EQUIPAMENTOS
+================================ */
+
 function encontrarSeriais(texto) {
-
-    /*
-        Procura qualquer sequência de exatamente
-        12 letras ou números.
-
-        Funciona mesmo que os dados estejam:
-
-        900DCBE81622 | ABC | 230050715869
-
-        ou em tabelas, espaços, quebras de linha etc.
-    */
 
     const encontrados =
         texto
@@ -280,78 +392,143 @@ function encontrarSeriais(texto) {
 }
 
 
-function separarSeriais() {
+/* ================================
+   ENCONTRAR CHIPS
+================================ */
+
+function encontrarChips(texto) {
+
+    /*
+        Chip:
+        20 dígitos
+        começando com 89
+
+        Exemplo:
+        89550534560039532219
+    */
+
+    const encontrados =
+        texto.match(/\b89\d{18}\b/g);
+
+    return encontrados || [];
+}
+
+
+/* ================================
+   ENCONTRAR DADOS
+================================ */
+
+function encontrarDados(texto) {
+
+    if (modoAtual === "chips") {
+
+        return encontrarChips(texto);
+
+    }
+
+    return encontrarSeriais(texto);
+}
+
+
+/* ================================
+   SEPARAR
+================================ */
+
+function separar() {
 
     const texto =
         document.getElementById("entrada").value;
 
-    const seriais =
-        encontrarSeriais(texto);
+    const encontrados =
+        encontrarDados(texto);
 
     const unicos =
-        [...new Set(seriais)];
+        [...new Set(encontrados)];
+
 
     document.getElementById("resultado").value =
         unicos.length > 0
         ? unicos.join("\n")
-        : "Nenhum serial de 12 caracteres encontrado.";
+        : mensagemNenhum();
 
-    atualizarContadores(seriais, unicos);
 
-    encontrarRepetidos(seriais);
+    atualizarContadores(
+        encontrados,
+        unicos
+    );
+
+    encontrarRepetidos(encontrados);
 }
 
+
+/* ================================
+   ANALISAR
+================================ */
 
 function analisar() {
 
-    const texto =
-        document.getElementById("entrada").value;
+    separar();
 
-    const seriais =
-        encontrarSeriais(texto);
-
-    const unicos =
-        [...new Set(seriais)];
-
-    document.getElementById("resultado").value =
-        unicos.length > 0
-        ? unicos.join("\n")
-        : "Nenhum serial de 12 caracteres encontrado.";
-
-    atualizarContadores(seriais, unicos);
-
-    encontrarRepetidos(seriais);
 }
 
 
-function atualizarContadores(seriais, unicos) {
+/* ================================
+   MENSAGEM
+================================ */
+
+function mensagemNenhum() {
+
+    if (modoAtual === "chips") {
+
+        return "Nenhum chip de 20 dígitos começando com 89 encontrado.";
+
+    }
+
+    return "Nenhum serial de 12 caracteres encontrado.";
+}
+
+
+/* ================================
+   CONTADORES
+================================ */
+
+function atualizarContadores(
+    dados,
+    unicos
+) {
 
     const contagem = {};
 
-    seriais.forEach(serial => {
 
-        if (!contagem[serial]) {
-            contagem[serial] = 0;
+    dados.forEach(item => {
+
+        if (!contagem[item]) {
+
+            contagem[item] = 0;
+
         }
 
-        contagem[serial]++;
+        contagem[item]++;
 
     });
 
 
     let quantidadeRepetidos = 0;
 
+
     Object.values(contagem).forEach(qtd => {
 
         if (qtd > 1) {
+
             quantidadeRepetidos++;
+
         }
 
     });
 
 
     document.getElementById("total").textContent =
-        seriais.length;
+        dados.length;
 
     document.getElementById("unicos").textContent =
         unicos.length;
@@ -360,38 +537,46 @@ function atualizarContadores(seriais, unicos) {
         quantidadeRepetidos;
 
     document.getElementById("validos").textContent =
-        seriais.length;
+        dados.length;
 
     document.getElementById("outros").textContent =
         0;
 }
 
 
-function encontrarRepetidos(seriais) {
+/* ================================
+   REPETIDOS
+================================ */
+
+function encontrarRepetidos(dados) {
 
     const contagem = {};
 
-    seriais.forEach(serial => {
 
-        if (!contagem[serial]) {
-            contagem[serial] = 0;
+    dados.forEach(item => {
+
+        if (!contagem[item]) {
+
+            contagem[item] = 0;
+
         }
 
-        contagem[serial]++;
+        contagem[item]++;
 
     });
 
 
     const repetidos = [];
 
-    Object.keys(contagem).forEach(serial => {
 
-        if (contagem[serial] > 1) {
+    Object.keys(contagem).forEach(item => {
+
+        if (contagem[item] > 1) {
 
             repetidos.push(
-                serial +
+                item +
                 " → apareceu " +
-                contagem[serial] +
+                contagem[item] +
                 "x"
             );
 
@@ -403,9 +588,13 @@ function encontrarRepetidos(seriais) {
     document.getElementById("listaRepetidos").textContent =
         repetidos.length > 0
         ? repetidos.join("\n")
-        : "Nenhum serial repetido.";
+        : "Nenhum item repetido.";
 }
 
+
+/* ================================
+   SELECIONAR RESULTADO
+================================ */
 
 function selecionarResultado() {
 
@@ -423,16 +612,22 @@ function selecionarResultado() {
 }
 
 
+/* ================================
+   COPIAR
+================================ */
+
 function copiarSeriais() {
 
     const campo =
         document.getElementById("resultado");
+
 
     if (
         !campo.value ||
         campo.value ===
         "Nenhum resultado ainda."
     ) {
+
         return;
     }
 
@@ -445,16 +640,15 @@ function copiarSeriais() {
         const sucesso =
             document.execCommand("copy");
 
+
         if (sucesso) {
 
-            alert(
-                "✅ Seriais copiados!"
-            );
+            alert("✅ Copiado!");
 
         } else {
 
             alert(
-                "Os seriais foram selecionados. Pressione Ctrl+C."
+                "Os dados foram selecionados. Pressione Ctrl+C."
             );
 
         }
@@ -462,13 +656,17 @@ function copiarSeriais() {
     } catch (erro) {
 
         alert(
-            "Os seriais foram selecionados. Pressione Ctrl+C."
+            "Os dados foram selecionados. Pressione Ctrl+C."
         );
 
     }
 
 }
 
+
+/* ================================
+   LIMPAR
+================================ */
 
 function limpar() {
 
